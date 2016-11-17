@@ -1,0 +1,18 @@
+#
+# this is your module manifest and used by Titanium
+# during compilation, packaging, distribution, etc.
+#
+version: 1.0.0
+apiversion: 3
+architectures: armeabi-v7a x86
+description: tus
+author: Rainer Knöterich
+license: Specify your license
+copyright: Copyright (c) 2016 by 
+
+# these should not be edited
+name: tus
+moduleid: ti.tus
+guid: 4c509534-de16-417b-b974-af645577274e
+platform: android
+minsdk: 6.1.0
