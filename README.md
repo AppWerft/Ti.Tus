@@ -15,7 +15,7 @@ Ti.Media.showCamera({
 	success : function(e) {
 		var file = Ti.Filesystem.getFile(Ti.Filesystem.applicationDataDirectory, "myPhoto");
 		file.write(e.media);
-		var client = Tus.createClient({
+		Tus.createClient({
 			file : file.nativePath,
 			url : "http://",
 			onprogress : handleProgress,
