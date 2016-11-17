@@ -15,10 +15,13 @@ Ti.Media.showCamera({
 	success : function(e) {
 		var file = Ti.Filesystem.getFile(Ti.Filesystem.applicationDataDirectory, "myPhoto");
 		file.write(e.media);
-		var client = Tus.createClient(file.nativePath);
-		client.addEventListener("progress",handleProgress);
-		client.addEventListener("success",handleSuccess);
-		client.addEventListener("error",handleError);
+		var client = Tus.createClient({
+			file : file.nativePath,
+			url : "http://",
+			onprogress : handleProgress,
+			onsuccess : handleSuccess,
+			onerror : handleError 
+		});
 	}
 });
 
