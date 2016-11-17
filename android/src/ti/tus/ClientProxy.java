@@ -26,7 +26,7 @@ import io.tus.java.client.TusUpload;
 import io.tus.java.client.TusUploader;
 
 @Kroll.proxy(creatableInModule = TusModule.class)
-public class TusClientProxy extends KrollProxy {
+public class ClientProxy extends KrollProxy {
 	// Standard Debugging variables
 	private static final String LCAT = "ExampleProxy";
 	private static final boolean DBG = TiConfig.LOGD;
@@ -35,7 +35,7 @@ public class TusClientProxy extends KrollProxy {
 	TusClient client = new TusClient();
 
 	// Constructor
-	public TusClientProxy() {
+	public ClientProxy() {
 		super();
 	}
 
@@ -62,7 +62,7 @@ public class TusClientProxy extends KrollProxy {
 				// upload and get a TusUploader in return. This class is
 				// responsible for opening
 				// a connection to the remote server and doing the uploading.
-				TusUploader uploader = client.resumeOrCreateUpload(url);
+				TusUploader uploader = client.resumeOrCreateUpload();
 
 				// Upload the file in chunks of 1KB sizes.
 				uploader.setChunkSize(1024);
