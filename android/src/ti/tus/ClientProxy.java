@@ -43,6 +43,7 @@ public class ClientProxy extends KrollProxy {
 	private KrollFunction onProgress;
 	File file = null;
 	TusClient client = new TusClient();
+	Context ctx = TiApplication.getInstance();
 
 	// Constructor
 	public ClientProxy() {
@@ -59,8 +60,21 @@ public class ClientProxy extends KrollProxy {
 			Object f = dict.get("file");
 			if (f instanceof String) {
 				filename = dict.getString("file");
-				file = new File(filename);
+				file = new File(filename.replace("file://", ""));
+				if (!file.exists() || !file.isFile()) {
+					return;
+				}
 			} else if (f instanceof TiBlob) {
+				File outputDir = ctx.getCacheDir();
+				try {
+					file = File
+							.createTempFile("prefix", "extension", outputDir);
+
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+
+			} else if (f instanceof TiFile) {
 
 			}
 		}
@@ -86,7 +100,7 @@ public class ClientProxy extends KrollProxy {
 		}
 
 		final TusUpload upload = new TusUpload();
-		Context ctx = TiApplication.getInstance();
+
 		// Enable resumable uploads by storing the upload URL in the preferences
 		// and preserve them after app restarts
 		client.enableResuming(new TusPreferencesURLStore(ctx
