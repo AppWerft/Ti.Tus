@@ -8,22 +8,27 @@
  */
 package ti.tus;
 
+import io.tus.android.client.TusPreferencesURLStore;
+import io.tus.java.client.ProtocolException;
+import io.tus.java.client.TusClient;
+import io.tus.java.client.TusExecutor;
+import io.tus.java.client.TusUpload;
+import io.tus.java.client.TusUploader;
+
+import java.io.File;
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 
 import org.appcelerator.kroll.KrollDict;
 import org.appcelerator.kroll.KrollFunction;
 import org.appcelerator.kroll.KrollModule;
 import org.appcelerator.kroll.KrollProxy;
 import org.appcelerator.kroll.annotations.Kroll;
-import org.appcelerator.kroll.common.Log;
 import org.appcelerator.kroll.common.TiConfig;
+import org.appcelerator.titanium.TiApplication;
 
-import io.tus.android.client.*;
-import io.tus.java.client.ProtocolException;
-import io.tus.java.client.TusClient;
-import io.tus.java.client.TusExecutor;
-import io.tus.java.client.TusUpload;
-import io.tus.java.client.TusUploader;
+import android.content.Context;
 
 @Kroll.proxy(creatableInModule = TusModule.class)
 public class ClientProxy extends KrollProxy {
@@ -32,6 +37,11 @@ public class ClientProxy extends KrollProxy {
 	private static final boolean DBG = TiConfig.LOGD;
 	private KrollFunction callback;
 	private String url;
+	private String file;
+	private KrollFunction onLoad;
+	private KrollFunction onProgress;
+
+	private TusUpload upload;
 	TusClient client = new TusClient();
 
 	// Constructor
@@ -41,19 +51,39 @@ public class ClientProxy extends KrollProxy {
 
 	// Handle creation options
 	@Override
-	public void handleCreationArgs(KrollModule createdInModule, Object[] args) {
-		if (args.length != 2)
-			return;
-		if (!(args[0] instanceof String))
-			return;
-		if (!(args[1] instanceof KrollFunction))
-			return;
-		callback = (KrollFunction) args[1];
-		url = (String) args[0];
+	public void handleCreationDict(KrollDict dict) {
+		if (dict.containsKeyAndNotNull("url")) {
+			url = dict.getString("url");
+		}
+		if (dict.containsKeyAndNotNull("file")) {
+			file = dict.getString("file");
+		}
+		if (dict.containsKeyAndNotNull("onload")) {
+			if (dict.get("onload") instanceof KrollFunction) {
+				onLoad = (KrollFunction) dict.get("onload");
+			}
+		}
+		if (dict.containsKeyAndNotNull("onprogress")) {
+			if (dict.get("onprogress") instanceof KrollFunction) {
+				onProgress = (KrollFunction) dict.get("onprogress");
+			}
+		}
 		initTus();
 	}
 
 	private void initTus() {
+		try {
+			client.setUploadCreationURL(new URL(url));
+		} catch (MalformedURLException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		upload = new TusUpload();
+		Context ctx = TiApplication.getInstance();
+		// Enable resumable uploads by storing the upload URL in the preferences
+		// and preserve them after app restarts
+		client.enableResuming(new TusPreferencesURLStore(ctx
+				.getSharedPreferences("tus", 0)));
 		TusExecutor executor = new TusExecutor() {
 			@Override
 			protected void makeAttempt() throws ProtocolException, IOException {
@@ -62,7 +92,7 @@ public class ClientProxy extends KrollProxy {
 				// upload and get a TusUploader in return. This class is
 				// responsible for opening
 				// a connection to the remote server and doing the uploading.
-				TusUploader uploader = client.resumeOrCreateUpload();
+				TusUploader uploader = client.resumeOrCreateUpload(upload);
 
 				// Upload the file in chunks of 1KB sizes.
 				uploader.setChunkSize(1024);
@@ -76,19 +106,29 @@ public class ClientProxy extends KrollProxy {
 					long totalBytes = upload.getSize();
 					long bytesUploaded = uploader.getOffset();
 					double progress = (double) bytesUploaded / totalBytes * 100;
-
-					System.out.printf("Upload at %06.2f%%.\n", progress);
+					if (hasListeners("progress")) {
+						KrollDict dict = new KrollDict();
+						dict.put("progress", progress);
+						fireEvent("progress", dict);
+					}
 				} while (uploader.uploadChunk() > -1);
-
-				// Allow the HTTP connection to be closed and cleaned up
 				uploader.finish();
-
-				System.out.println("Upload finished.");
-				System.out.format("Upload available at: %s", uploader
-						.getUploadURL().toString());
+				if (hasListeners("success")) {
+					KrollDict dict = new KrollDict();
+					dict.put("success", true);
+					dict.put("url", uploader.getUploadURL().toString());
+					fireEvent("progress", dict);
+				}
 			}
 		};
-		executor.makeAttempts();
-
+		try {
+			executor.makeAttempts();
+		} catch (ProtocolException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 }
