@@ -27,6 +27,7 @@ import org.appcelerator.kroll.KrollProxy;
 import org.appcelerator.kroll.annotations.Kroll;
 import org.appcelerator.kroll.common.TiConfig;
 import org.appcelerator.titanium.TiApplication;
+import org.appcelerator.titanium.TiBlob;
 
 import android.content.Context;
 
@@ -37,11 +38,10 @@ public class ClientProxy extends KrollProxy {
 	private static final boolean DBG = TiConfig.LOGD;
 	private KrollFunction callback;
 	private String url;
-	private String file;
+	private String filename;
 	private KrollFunction onLoad;
 	private KrollFunction onProgress;
-
-	private TusUpload upload;
+	File file = null;
 	TusClient client = new TusClient();
 
 	// Constructor
@@ -56,7 +56,13 @@ public class ClientProxy extends KrollProxy {
 			url = dict.getString("url");
 		}
 		if (dict.containsKeyAndNotNull("file")) {
-			file = dict.getString("file");
+			Object f = dict.get("file");
+			if (f instanceof String) {
+				filename = dict.getString("file");
+				file = new File(filename);
+			} else if (f instanceof TiBlob) {
+
+			}
 		}
 		if (dict.containsKeyAndNotNull("onload")) {
 			if (dict.get("onload") instanceof KrollFunction) {
@@ -78,7 +84,8 @@ public class ClientProxy extends KrollProxy {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
-		upload = new TusUpload();
+
+		final TusUpload upload = new TusUpload();
 		Context ctx = TiApplication.getInstance();
 		// Enable resumable uploads by storing the upload URL in the preferences
 		// and preserve them after app restarts
